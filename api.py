@@ -1,7 +1,10 @@
 from fastapi import FastAPI, File, UploadFile, HTTPException, Query
-from fastapi.responses import JSONResponse
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 import PIL.Image as Image
 import io
+import os
+from fastapi.responses import JSONResponse
 
 from matcher import Matcher
 from inference import Inferencer
@@ -10,6 +13,17 @@ from datasets.coco import COCO_CLASS_IDS
 # ── Startup ───────────────────────────────────────────────────────────────────
 
 app = FastAPI(title="QuickSegment", version="0.1.0")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+app.mount("/tests", StaticFiles(directory="tests"), name="tests")
+app.mount("/media", StaticFiles(directory="./tests/media"), name="media")
 
 COCO_CLASSES = list(COCO_CLASS_IDS.keys())
 
@@ -31,13 +45,22 @@ def health():
 def classes():
     return matcher.datasets
 
+@app.get("/media-list")
+def list_media():
+    media_dir = "./tests/media"
+    files = [
+        f for f in os.listdir(media_dir)
+        if f.lower().endswith(('.jpg', '.jpeg', '.png'))
+    ]
+    return JSONResponse(files)
+
 
 @app.post("/segment")
 async def segment(
     file: UploadFile = File(...),
     query: str = Query(..., description="Natural language query, e.g. 'vehicles'"),
-    conf: float = Query(0.5, ge=0.0, le=1.0),
-    threshold: float = Query(0.3, ge=0.0, le=1.0),
+    conf: float = Query(0.4, ge=0.0, le=1.0),
+    threshold: float = Query(0.5, ge=0.0, le=1.0),
 ):
     # Validate image
     if not file.content_type.startswith("image/"):
