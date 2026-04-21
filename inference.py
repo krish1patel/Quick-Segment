@@ -1,6 +1,9 @@
 from ultralytics import YOLO
 from datasets.coco import COCO_CLASS_IDS
 
+import cv2
+import numpy as np
+
 MODEL_MAP = { 
     "coco": "yolo26n-seg.pt" #,
     # "lvis": "yolo26n-lvis.pt"
@@ -17,6 +20,19 @@ class Inferencer:
 
     def __init__(self) -> None:
         self._models: dict[str, YOLO] = {"coco": YOLO("yolo26n-seg.pt")}
+
+    @staticmethod
+    def _extract_contours(mask: np.ndarray, orig_w: int, orig_h: int) -> list[list[int]]:
+        # Resize from model space (640x640) back to original image dimensions
+        mask_resized = cv2.resize(mask, (orig_w, orig_h), interpolation=cv2.INTER_NEAREST)
+        binary = (mask_resized > 0.5).astype(np.uint8)
+        contours, _ = cv2.findContours(binary, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        if not contours:
+            return []
+        # Take the largest contour (handles noise/fragments)
+        largest = max(contours, key=cv2.contourArea)
+        # Flatten [[x, y], [x, y], ...] → [x, y, x, y, ...]
+        return largest.reshape(-1, 2).tolist()
 
 
     def predict(self, image, matches: list[tuple[str, str]], conf: float = 0.5) -> list[dict]:
@@ -42,6 +58,11 @@ class Inferencer:
             else:
                 datasets[dataset].append(class_id)
 
+        if hasattr(image, "width"):
+            orig_w, orig_h = image.width, image.height  # PIL
+        else:
+            orig_h, orig_w = image.shape[:2]  # numpy/cv2
+
         output = []
         for dataset, class_ids in datasets.items():
             results = self._models[dataset].predict(source=image, classes=class_ids, conf=conf)
@@ -56,7 +77,7 @@ class Inferencer:
                         "dataset": dataset,
                         "confidence": round(float(box.conf.item()), 3),
                         "bbox": [round(float(x), 2) for x in box.xyxy[0].tolist()],
-                        "mask": mask.cpu().numpy().tolist()
+                        "mask": self._extract_contours(mask.cpu().numpy(), orig_w, orig_h)
                     })
 
         return output
