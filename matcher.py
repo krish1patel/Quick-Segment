@@ -62,7 +62,7 @@ class Matcher:
         query_embedding = self.model.encode([query])
         scores = cosine_similarity(query_embedding, self.embeddings)[0]
         # scores = self.model.similarity(query_embedding, self.embeddings)[0]
-        best_idx = np.argmax(scores)  # no need for argsort if you just want the top one
+        best_idx = np.argmax(scores)
     
         return self.registry[best_idx]
 
@@ -85,9 +85,11 @@ class Matcher:
         scores = cosine_similarity(query_embedding, self.embeddings)[0]
 
         matches = []
+        classes = []
 
         for i, score in enumerate(scores):
-            if score >= threshold:
+            if score >= threshold and self.registry[i][0] not in classes:
                 matches.append(self.registry[i])
+                classes.append(self.registry[i][0])
 
         return matches

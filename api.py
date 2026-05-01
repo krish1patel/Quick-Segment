@@ -9,6 +9,7 @@ from fastapi.responses import JSONResponse
 from matcher import Matcher
 from inference import Inferencer
 from datasets.coco import COCO_CLASS_IDS
+from datasets.yoloe import YOLOE_CLASS_IDS
 
 # ── Startup ───────────────────────────────────────────────────────────────────
 
@@ -26,9 +27,11 @@ app.mount("/tests", StaticFiles(directory="tests"), name="tests")
 app.mount("/media", StaticFiles(directory="./tests/media"), name="media")
 
 COCO_CLASSES = list(COCO_CLASS_IDS.keys())
+YOLOE_CLASSES = list(YOLOE_CLASS_IDS.keys())
 
 matcher = Matcher()
 matcher.register("coco", COCO_CLASSES)
+matcher.register("yoloe", YOLOE_CLASSES)
 matcher.build()
 
 inferencer = Inferencer()

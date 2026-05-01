@@ -78,5 +78,5 @@ COCO_CLASS_IDS = {
     "scissors": 76,
     "teddy bear": 77,
     "hair drier": 78,
-    "toothbrush": 79
+    "toothbrush": 79,
 }

@@ -1,16 +1,19 @@
-from ultralytics import YOLO
+from ultralytics import YOLO, YOLOE
 from datasets.coco import COCO_CLASS_IDS
 
-import cv2
-import numpy as np
+# import cv2
+# import numpy as np
+
+from datasets.yoloe import YOLOE_CLASS_IDS
 
 MODEL_MAP = { 
-    "coco": "yolo26n-seg.pt" #,
-    # "lvis": "yolo26n-lvis.pt"
+    "coco": "yolo26n-seg.pt",
+    "yoloe": "yoloe-26s-seg-pf.pt"
 }
 
 DATASET_ID_MAP = {
-    "coco": COCO_CLASS_IDS
+    "coco": COCO_CLASS_IDS,
+    "yoloe": YOLOE_CLASS_IDS
 }
 
 class Inferencer:
@@ -19,20 +22,20 @@ class Inferencer:
     """
 
     def __init__(self) -> None:
-        self._models: dict[str, YOLO] = {"coco": YOLO("yolo26n-seg.pt")}
+        self._models: dict[str, YOLO] = {"coco": YOLO("yolo26n-seg.pt"), "yoloe": YOLOE("yoloe-26s-seg-pf.pt")}
 
-    @staticmethod
-    def _extract_contours(mask: np.ndarray, orig_w: int, orig_h: int) -> list[list[int]]:
-        # Resize from model space (640x640) back to original image dimensions
-        mask_resized = cv2.resize(mask, (orig_w, orig_h), interpolation=cv2.INTER_NEAREST)
-        binary = (mask_resized > 0.5).astype(np.uint8)
-        contours, _ = cv2.findContours(binary, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-        if not contours:
-            return []
-        # Take the largest contour (handles noise/fragments)
-        largest = max(contours, key=cv2.contourArea)
-        # Flatten [[x, y], [x, y], ...] → [x, y, x, y, ...]
-        return largest.reshape(-1, 2).tolist()
+    # @staticmethod
+    # def _extract_contours(mask: np.ndarray, orig_w: int, orig_h: int) -> list[list[int]]:
+    #     # Resize from model space (640x640) back to original image dimensions
+    #     mask_resized = cv2.resize(mask, (orig_w, orig_h), interpolation=cv2.INTER_NEAREST)
+    #     binary = (mask_resized > 0.5).astype(np.uint8)
+    #     contours, _ = cv2.findContours(binary, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    #     if not contours:
+    #         return []
+    #     # Take the largest contour (handles noise/fragments)
+    #     largest = max(contours, key=cv2.contourArea)
+    #     # Flatten [[x, y], [x, y], ...] → [x, y, x, y, ...]
+    #     return largest.reshape(-1, 2).tolist()
 
 
     def predict(self, image, matches: list[tuple[str, str]], conf: float = 0.5) -> list[dict]:
@@ -69,7 +72,8 @@ class Inferencer:
             for result in results:
                 if result.masks is None:
                     continue
-                for i, mask in enumerate(result.masks.data):
+                masks_xy = result.masks.xy  # list of np.ndarray, each (N, 2), in original image coords
+                for i, polygon in enumerate(masks_xy):
                     box = result.boxes[i]
                     class_id = int(box.cls.item())
                     output.append({
@@ -77,7 +81,7 @@ class Inferencer:
                         "dataset": dataset,
                         "confidence": round(float(box.conf.item()), 3),
                         "bbox": [round(float(x), 2) for x in box.xyxy[0].tolist()],
-                        "mask": self._extract_contours(mask.cpu().numpy(), orig_w, orig_h)
+                        "mask": polygon.round().astype(int).tolist()
                     })
 
         return output

@@ -27,11 +27,16 @@
     --radius-lg: 16px;
   }
 
+  html {
+    height: 100%;
+  }
+
   body {
     font-family: var(--sans);
     background: var(--bg);
     color: var(--text);
-    min-height: 100vh;
+    height: 100%;
+    overflow: hidden;
     display: flex;
     flex-direction: column;
   }
@@ -79,6 +84,7 @@
     display: grid;
     grid-template-columns: 360px 1fr;
     flex: 1;
+    min-height: 0;
     overflow: hidden;
   }
 
@@ -88,7 +94,10 @@
     border-right: 1px solid var(--border);
     display: flex;
     flex-direction: column;
+    min-height: 0;
+    min-width: 0;
     overflow-y: auto;
+    overflow-x: hidden;
     padding: 1.5rem;
     gap: 1.5rem;
   }
@@ -100,6 +109,91 @@
     color: var(--muted);
     text-transform: uppercase;
     margin-bottom: 0.75rem;
+  }
+
+  .label-row {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .info-bubble {
+    position: relative;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    border: 1px solid var(--border2);
+    background: var(--surface2);
+    color: var(--muted);
+    font-family: var(--mono);
+    font-size: 10px;
+    line-height: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: help;
+    user-select: none;
+  }
+
+  .info-bubble::after {
+    content: attr(data-tip);
+    position: absolute;
+    left: 50%;
+    bottom: calc(100% + 8px);
+    transform: translateX(-50%) translateY(2px);
+    min-width: 180px;
+    max-width: 260px;
+    padding: 7px 9px;
+    border-radius: 8px;
+    border: 1px solid var(--border2);
+    background: rgba(18, 18, 24, 0.96);
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 11px;
+    line-height: 1.35;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.15s ease, transform 0.15s ease;
+    z-index: 200;
+    text-transform: none;
+    letter-spacing: normal;
+    white-space: normal;
+  }
+
+  .info-bubble.tip-left::after {
+    left: 0;
+    transform: translateX(0) translateY(2px);
+  }
+
+  .info-bubble.tip-right::after {
+    left: auto;
+    right: 0;
+    transform: translateX(0) translateY(2px);
+  }
+
+  .info-bubble.tip-bottom::after {
+    bottom: auto;
+    top: calc(100% + 8px);
+  }
+
+  .info-bubble:hover,
+  .info-bubble:focus-visible {
+    color: var(--accent2);
+    border-color: var(--accent);
+    outline: none;
+  }
+
+  .info-bubble:hover::after,
+  .info-bubble:focus-visible::after {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+
+  .info-bubble.tip-left:hover::after,
+  .info-bubble.tip-left:focus-visible::after,
+  .info-bubble.tip-right:hover::after,
+  .info-bubble.tip-right:focus-visible::after {
+    transform: translateX(0) translateY(0);
   }
 
   /* Mode tabs */
@@ -343,6 +437,8 @@
     display: flex;
     flex-direction: column;
     background: var(--bg);
+    min-height: 0;
+    min-width: 0;
     overflow: hidden;
   }
 
@@ -399,11 +495,12 @@
 
   .canvas-wrap {
     flex: 1;
+    min-height: 0;
     display: flex;
     align-items: center;
     justify-content: center;
     position: relative;
-    overflow: hidden;
+    overflow: auto;
   }
 
   .placeholder {
@@ -511,7 +608,7 @@
 
     <!-- Mode -->
     <div>
-      <div class="section-label">Mode</div>
+      <div class="section-label label-row">Mode <span class="info-bubble tip-left tip-bottom" tabindex="0" data-tip="Switch between still image uploads and live webcam inference.">?</span></div>
       <div class="mode-tabs">
         <button class="mode-tab active" id="tabImage" onclick="setMode('image')">Image</button>
         <button class="mode-tab" id="tabWebcam" onclick="setMode('webcam')">Webcam</button>
@@ -520,13 +617,13 @@
 
     <!-- Query -->
     <div>
-      <div class="section-label">Query</div>
+      <div class="section-label label-row">Query <span class="info-bubble tip-left" tabindex="0" data-tip="Natural-language prompt used to match classes before segmentation runs.">?</span></div>
       <input class="query-input" type="text" id="queryInput" placeholder="e.g. vehicles, people, animals..." value="vehicles">
     </div>
 
     <!-- Threshold -->
     <div>
-      <div class="section-label">Match threshold</div>
+      <div class="section-label label-row">Match threshold <span class="info-bubble tip-left" tabindex="0" data-tip="Higher values are stricter semantic matches. Lower values return more candidate classes.">?</span></div>
       <div class="range-row">
         <input type="range" min="0.1" max="0.9" step="0.05" value="0.5" id="threshSlider">
         <span class="range-val" id="threshVal">0.50</span>
@@ -535,7 +632,7 @@
 
     <!-- Confidence -->
     <div>
-      <div class="section-label">Confidence threshold</div>
+      <div class="section-label label-row">Confidence threshold <span class="info-bubble tip-left" tabindex="0" data-tip="Minimum model confidence required for a detection to be shown.">?</span></div>
       <div class="range-row">
         <input type="range" min="0.1" max="0.95" step="0.05" value="0.4" id="confSlider">
         <span class="range-val" id="confVal">0.40</span>
@@ -546,7 +643,7 @@
 
     <!-- Overlays -->
     <div>
-      <div class="section-label">Overlays</div>
+      <div class="section-label label-row">Overlays <span class="info-bubble tip-left" tabindex="0" data-tip="Toggle visual layers drawn on top of detections.">?</span></div>
       <div class="toggle-row">
         <span class="toggle-label">Bounding box</span>
         <label class="toggle">
@@ -588,9 +685,6 @@
       <div style="margin-top: 1rem;">
         <div class="section-label">Sample media</div>
         <div class="test-images" id="testImages"></div>
-        <div style="margin-top: 6px; font-size: 11px; color: var(--muted); font-family: var(--mono);">
-          sample images
-        </div>
       </div>
     </div>
 
@@ -613,12 +707,20 @@
             <div class="toggle-thumb"></div>
           </label>
         </div>
+        <div class="toggle-row">
+          <span class="toggle-label">Max speed</span>
+          <label class="toggle">
+            <input type="checkbox" id="toggleMaxSpeed">
+            <div class="toggle-track"></div>
+            <div class="toggle-thumb"></div>
+          </label>
+        </div>
         <div style="font-size: 11px; color: var(--muted); margin-top: 4px; font-family: var(--mono);">
           interval: <span id="inferFpsLabel">500</span>ms
         </div>
         <div class="range-row" style="margin-top: 4px;">
-          <input type="range" min="200" max="2000" step="100" value="500" id="inferInterval" oninput="document.getElementById('inferFpsLabel').textContent=this.value">
-          <span style="font-size: 11px; color: var(--muted); font-family: var(--mono);">ms</span>
+          <input type="range" min="200" max="2000" step="100" value="500" id="inferInterval">
+          <span id="inferIntervalUnit" style="font-size: 11px; color: var(--muted); font-family: var(--mono);">ms</span>
         </div>
       </div>
     </div>
@@ -627,7 +729,7 @@
 
     <!-- Matches -->
     <div>
-      <div class="section-label">Active classes</div>
+      <div class="section-label label-row">Active classes <span class="info-bubble tip-left" tabindex="0" data-tip="Classes selected from your query and passed to the segmentation model.">?</span></div>
       <div class="matches-panel" id="matchesPanel">
         <span class="no-matches">run a query to see matches</span>
       </div>
@@ -638,15 +740,15 @@
   <!-- ── Canvas area ── -->
   <main class="canvas-area">
     <div class="canvas-toolbar">
-      <span class="stat">mode: <span class="stat-val" id="statMode">image</span></span>
-      <span class="stat">detections: <span class="stat-val" id="statDets">—</span></span>
-      <span class="stat">latency: <span class="stat-val" id="statLatency">—</span></span>
+      <span class="stat">mode: <span class="stat-val" id="statMode">image</span> <span class="info-bubble tip-bottom tip-left" tabindex="0" data-tip="Current input mode used for inference.">?</span></span>
+      <span class="stat">detections: <span class="stat-val" id="statDets">—</span> <span class="info-bubble tip-bottom tip-left" tabindex="0" data-tip="Count of detections returned by the latest inference call.">?</span></span>
+      <span class="stat">latency: <span class="stat-val" id="statLatency">—</span> <span class="info-bubble tip-bottom tip-left" tabindex="0" data-tip="Round-trip API time for the most recent segmentation request.">?</span></span>
       <div class="zoom-row">
-        <span>zoom:</span>
+        <span>zoom:</span><span class="info-bubble tip-bottom tip-right" tabindex="0" data-tip="Display-only zoom for inspection. It does not change inference output.">?</span>
         <input type="range" min="25" max="200" step="5" value="100" id="zoomSlider" oninput="applyZoom()">
         <span id="zoomVal">100%</span>
       </div>
-      <button class="run-btn" id="runBtn" onclick="runInference()" disabled>▶ RUN</button>
+      <button class="run-btn" id="runBtn" onclick="runInference()" disabled title="Runs segmentation with the current query and thresholds">▶ RUN</button>
     </div>
 
     <div class="canvas-wrap" id="canvasWrap">
@@ -686,6 +788,7 @@ let lastResults = [];
 let lastMatches = [];
 let webcamStream = null;
 let inferTimer = null;
+let liveInferLoopActive = false;
 let isInferring = false;
 let zoomScale = 1.0;
 
@@ -714,6 +817,23 @@ document.getElementById('threshSlider').oninput = function() {
 document.getElementById('confSlider').oninput = function() {
   document.getElementById('confVal').textContent = parseFloat(this.value).toFixed(2);
 };
+document.getElementById('inferInterval').oninput = function() {
+  if (document.getElementById('toggleMaxSpeed').checked) return;
+  document.getElementById('inferFpsLabel').textContent = this.value;
+};
+
+function updateInferSpeedControls() {
+  const maxSpeed = document.getElementById('toggleMaxSpeed').checked;
+  const intervalSlider = document.getElementById('inferInterval');
+  const label = document.getElementById('inferFpsLabel');
+  const unit = document.getElementById('inferIntervalUnit');
+  intervalSlider.disabled = maxSpeed;
+  intervalSlider.style.opacity = maxSpeed ? '0.5' : '1';
+  label.textContent = maxSpeed ? 'max' : intervalSlider.value;
+  unit.textContent = maxSpeed ? '' : 'ms';
+}
+document.getElementById('toggleMaxSpeed').onchange = updateInferSpeedControls;
+updateInferSpeedControls();
 
 // Redraw on toggle change without re-running inference
 ['toggleBbox','toggleMask','toggleLabels'].forEach(id => {
@@ -862,6 +982,14 @@ function drawDetections(results) {
   const showBbox = document.getElementById('toggleBbox').checked;
   const showMask = document.getElementById('toggleMask').checked;
   const showLabels = document.getElementById('toggleLabels').checked;
+  const baseWidth = 1280;
+  const baseHeight = 720;
+  const resolutionScale = Math.sqrt((canvas.width * canvas.height) / (baseWidth * baseHeight));
+  const bboxLineWidth = Math.max(1, 2 * resolutionScale);
+  const labelFontSize = Math.max(10, Math.round(13 * resolutionScale));
+  const labelHeight = Math.max(18, Math.round(22 * resolutionScale));
+  const labelPadX = Math.max(4, Math.round(6 * resolutionScale));
+  const labelTextOffsetY = Math.max(4, Math.round(6 * resolutionScale));
 
   results.forEach((det, i) => {
     const [r, g, b] = PALETTE[i % PALETTE.length];
@@ -885,7 +1013,7 @@ function drawDetections(results) {
     if (showBbox) {
       const [x1, y1, x2, y2] = det.bbox;
       ctx.strokeStyle = `rgba(${r},${g},${b},1)`;
-      ctx.lineWidth = 2;
+      ctx.lineWidth = bboxLineWidth;
       ctx.strokeRect(x1, y1, x2 - x1, y2 - y1);
     }
 
@@ -893,12 +1021,13 @@ function drawDetections(results) {
     if (showLabels) {
       const [x1, y1] = det.bbox;
       const label = `${det.class_name}  ${(det.confidence * 100).toFixed(0)}%`;
-      ctx.font = '500 13px DM Sans, sans-serif';
+      ctx.font = `500 ${labelFontSize}px DM Sans, sans-serif`;
       const tw = ctx.measureText(label).width;
       ctx.fillStyle = `rgba(${r},${g},${b},0.92)`;
-      ctx.fillRect(x1, y1 - 22, tw + 12, 22);
+      const labelY = y1 - labelHeight;
+      ctx.fillRect(x1, labelY, tw + (labelPadX * 2), labelHeight);
       ctx.fillStyle = '#fff';
-      ctx.fillText(label, x1 + 6, y1 - 6);
+      ctx.fillText(label, x1 + labelPadX, y1 - labelTextOffsetY);
     }
   });
 }
@@ -910,7 +1039,8 @@ async function runInference(blobOverride = null) {
   isInferring = true;
 
   const spinner = document.getElementById('spinner');
-  spinner.classList.add('active');
+  const showSpinner = mode !== 'webcam';
+  if (showSpinner) spinner.classList.add('active');
 
   const query = document.getElementById('queryInput').value.trim();
   const threshold = document.getElementById('threshSlider').value;
@@ -919,7 +1049,11 @@ async function runInference(blobOverride = null) {
   let blob = blobOverride;
 
   if (!blob) {
-    if (!sourceImage) { isInferring = false; spinner.classList.remove('active'); return; }
+    if (!sourceImage) {
+      isInferring = false;
+      if (showSpinner) spinner.classList.remove('active');
+      return;
+    }
     const tmpCanvas = document.createElement('canvas');
     tmpCanvas.width = sourceImage.naturalWidth;
     tmpCanvas.height = sourceImage.naturalHeight;
@@ -956,7 +1090,7 @@ async function runInference(blobOverride = null) {
   }
 
   isInferring = false;
-  spinner.classList.remove('active');
+  if (showSpinner) spinner.classList.remove('active');
 }
 
 // ── Matches panel ─────────────────────────────────────────────────────────────
@@ -1038,22 +1172,40 @@ async function startWebcam() {
 }
 
 function stopWebcam() {
+  liveInferLoopActive = false;
   if (webcamStream) {
     webcamStream.getTracks().forEach(t => t.stop());
     webcamStream = null;
   }
-  clearInterval(inferTimer);
+  clearTimeout(inferTimer);
   inferTimer = null;
   document.getElementById('startCamBtn').disabled = false;
   document.getElementById('stopCamBtn').disabled = true;
 }
 
 function startLiveInfer() {
-  clearInterval(inferTimer);
+  liveInferLoopActive = true;
+  clearTimeout(inferTimer);
+  inferTimer = null;
+
+  const scheduleNextTick = (tick) => {
+    if (!liveInferLoopActive) return;
+    const maxSpeed = document.getElementById('toggleMaxSpeed').checked;
+    const delay = maxSpeed ? 0 : parseInt(document.getElementById('inferInterval').value, 10);
+    inferTimer = setTimeout(tick, delay);
+  };
+
   const tick = async () => {
-    if (!document.getElementById('toggleLive').checked) return;
+    if (!liveInferLoopActive) return;
+    if (!document.getElementById('toggleLive').checked) {
+      scheduleNextTick(tick);
+      return;
+    }
     const video = document.getElementById('webcamFeed');
-    if (!video.videoWidth) return;
+    if (!video.videoWidth) {
+      scheduleNextTick(tick);
+      return;
+    }
 
     const tmp = document.createElement('canvas');
     tmp.width = video.videoWidth; tmp.height = video.videoHeight;
@@ -1068,15 +1220,11 @@ function startLiveInfer() {
     const ctx = canvas.getContext('2d');
     ctx.drawImage(video, 0, 0);
     if (lastResults.length) drawDetections(lastResults);
+
+    scheduleNextTick(tick);
   };
 
-  const ms = parseInt(document.getElementById('inferInterval').value);
-  inferTimer = setInterval(tick, ms);
-  document.getElementById('inferInterval').oninput = function() {
-    document.getElementById('inferFpsLabel').textContent = this.value;
-    clearInterval(inferTimer);
-    inferTimer = setInterval(tick, parseInt(this.value));
-  };
+  tick();
 }
 </script>
 
