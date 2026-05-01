@@ -1,116 +1,168 @@
 # Quick-Segment
 
-A segmentation API that accepts natural language queries and returns segmentation masks from the most relevant classes across multiple datasets and models.
+Quick-Segment is a natural language image segmentation API.
+It takes a text query like "vehicles on the street", maps that intent to likely object classes, and returns instance masks, boxes, and confidence scores from YOLO segmentation models.
+
+This project is designed to showcase practical ML systems engineering: semantic retrieval, multi-dataset routing, inference orchestration, and clean API design.
+
+## Why This Project
+
+Most segmentation APIs require exact class names ("car", "truck", "person").
+Quick-Segment allows flexible natural language queries and automatically finds the most relevant classes before running segmentation.
+This approach still leverages strong pretrained segmentation models after class selection, which can be more accurate than traditional open-vocabulary segmentation pipelines.
+
+Core value:
+- Natural language to class mapping with sentence embeddings
+- Dataset-aware inference routing
+- Structured JSON output ready for visualization or downstream apps
+
+## Preview
+
+**Architecture diagram**
+ 
+![Alt Text](readme_media/quicksegment_pipeline_architecture_v3.svg)
+
+**GUI Demo**
+ 
+![Alt Text](readme_media/demo.gif)
 
 ## How It Works
 
-```
-query → semantic matching → class IDs → YOLO inference → masks + metadata
+ 
+```text
+query + image -> semantic matching -> matched classes -> dataset grouping -> YOLO segmentation -> unified detections
 ```
 
-1. User submits an image and a natural language query (e.g. "find all the vehicles")
-2. The query is embedded and compared against all known classes using cosine similarity
-3. Matching classes are grouped by dataset and routed to the appropriate YOLO model
-4. Results are combined and returned as a list of detections with masks, bounding boxes, and confidence scores
+1. A client uploads an image and query text.
+2. The query is embedded with `all-mpnet-base-v2` and compared with known class labels using cosine similarity.
+3. Matching classes above a threshold are grouped by dataset.
+4. Each dataset is processed by its corresponding YOLO segmentation model.
+5. Results are merged into one response containing:
+   - `class_name`
+   - `dataset`
+   - `confidence`
+   - `bbox`
+   - `mask` (polygon coordinates)
+
+## Tech Stack
+
+- **Backend:** FastAPI
+- **Semantic Matching:** sentence-transformers (`all-mpnet-base-v2`) + cosine similarity
+- **Segmentation Models:** Ultralytics YOLO / YOLOE
+- **Image Processing:** PIL
 
 ## Project Structure
 
-```
-segmatch/
-  matcher.py          # semantic class matching via sentence transformers
-  inference.py        # YOLO inference wrapper, lazy model loading
-  api.py              # FastAPI endpoints
+```text
+quick-segment/
+  api.py                 # FastAPI app and endpoints
+  matcher.py             # query -> semantic class matching
+  inference.py           # dataset-aware YOLO segmentation wrapper
   datasets/
-    __init__.py
-    coco.py           # COCO class list and class→ID map
+    coco.py              # COCO class -> id mapping
+    yoloe.py             # YOLOE class -> id mapping
   tests/
     test_matcher.py
     test_inference.py
 ```
 
-## Supported Datasets
-
-| Dataset | Model       | Classes            |
-| ------- | ----------- | ------------------ |
-| COCO    | yolo26n-seg | 80 general classes |
-
-More datasets coming soon.
-
-## API
+## API Endpoints
 
 ### `POST /segment`
 
-Submit an image and query, returns segmentation results.
+Run segmentation using an uploaded image and natural language query.
 
-**Request**
+- **Content type:** `multipart/form-data`
+- **Required:**
+  - `file`: image file (`image/*`)
+  - `query`: natural language query (query parameter)
+- **Optional query parameters:**
+  - `conf` (default `0.4`): model confidence threshold
+  - `threshold` (default `0.5`): semantic match threshold
+
+Example:
+
+```bash
+curl -X POST "http://127.0.0.1:8000/segment?query=vehicles&conf=0.4&threshold=0.5" \
+  -F "file=@tests/media/street.jpg"
+```
+
+Response shape:
 
 ```json
 {
-  "query": "find all the vehicles",
-  "image": "<base64 encoded image>"
+  "query": "vehicles",
+  "matches": [
+    { "class_name": "car", "dataset": "coco" }
+  ],
+  "detections": [
+    {
+      "class_name": "car",
+      "dataset": "coco",
+      "confidence": 0.913,
+      "bbox": [35.14, 120.66, 413.89, 350.77],
+      "mask": [[x, y], [x, y]]
+    }
+  ]
 }
-```
-
-**Response**
-
-```json
-[
-  {
-    "class_name": "car",
-    "dataset": "coco",
-    "confidence": 0.91,
-    "bbox": [x1, y1, x2, y2],
-    "mask": [[...], ...]
-  }
-]
 ```
 
 ### `GET /classes`
 
-Returns all available classes across registered datasets.
+Returns registered class lists by dataset.
 
 ### `GET /health`
 
-Health check.
+Basic health check endpoint.
 
-## Setup
+### `GET /media-list`
 
-**Requirements:** Python 3.11+, pip
+Lists sample images available in `tests/media`.
+
+## Supported Datasets and Models
+
+| Dataset | Model | Notes |
+| ------- | ----- | ----- |
+| COCO | `yolo26n-seg.pt` | General 80-class object segmentation |
+| YOLOE | `yoloe-26s-seg-pf.pt` | Extended class vocabulary |
+
+## Local Development
+
+### Requirements
+
+- Python 3.11+
+- `pip`
+
+### Setup
 
 ```bash
-# clone and install
-git clone https://github.com/yourname/quick-segment
+git clone https://github.com/krish1patel/quick-segment.git
 cd quick-segment
-python -m venv venv
-source venv/bin/activate
+python -m venv .venv
+source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-**Run the API**
+### Run the API
 
 ```bash
 uvicorn api:app --reload
 ```
 
-YOLO model weights are downloaded automatically on first use.
+Then open:
+- `http://127.0.0.1:8000/docs` for interactive Swagger docs
+- `http://127.0.0.1:8000/health` for quick status checks
 
-## Configuration
+Note: model weights are downloaded automatically on first inference run.
 
-| Parameter   | Default | Description                                    |
-| ----------- | ------- | ---------------------------------------------- |
-| `threshold` | `0.3`   | Cosine similarity threshold for class matching |
-| `conf`      | `0.5`   | YOLO detection confidence threshold            |
 
-## Tiers
+## Future Improvements
 
-|          | Free         | Paid         |
-| -------- | ------------ | ------------ |
-| Requests | Rate limited | Higher limit |
-| Model    | yolo26n-seg  | yolo26s-seg  |
+- Add ranking/limit controls for top semantic matches
+- Add benchmark scripts for latency and throughput
+- Add optional mask simplification for smaller payloads
+- Add lightweight frontend demo for interactive query testing
+- Add more pretrained models
+- Add user selected pretrained models
 
-## Dependencies
 
-- [Ultralytics](https://github.com/ultralytics/ultralytics) — YOLO26 inference
-- [sentence-transformers](https://www.sbert.net/) — semantic class matching
-- [FastAPI](https://fastapi.tiangolo.com/) — API framework
-- [scikit-learn](https://scikit-learn.org/) — cosine similarity
