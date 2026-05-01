@@ -166,3 +166,13 @@ Note: model weights are downloaded automatically on first inference run.
 - Add user selected pretrained models
 
 
+## License & dependencies
+
+QuickSegment is licensed under the [MIT License](LICENSE).
+
+This project depends on third-party libraries with their own licenses. Most
+notably, [Ultralytics](https://github.com/ultralytics/ultralytics) (used for
+the YOLO and YOLOE models) is distributed under **AGPL-3.0**. If you intend
+to use this project — or models trained with Ultralytics — in a commercial
+or distributed setting, please review Ultralytics' licensing terms and
+obtain a commercial license if applicable.
